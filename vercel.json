@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "name": "quizspark",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_OPENAI_API_KEY": "@openai_api_key"
+  }
+}
