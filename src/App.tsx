@@ -7,6 +7,7 @@ import ResultPage from './components/ResultPage';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { PageType, QuestionSet, TestResults } from './types';
 
+
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [darkMode, setDarkMode] = useLocalStorage('darkMode', false);
