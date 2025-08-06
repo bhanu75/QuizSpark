@@ -7,7 +7,6 @@ import ResultPage from './components/ResultPage';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { PageType, QuestionSet, TestResults } from './types';
 
-
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [darkMode, setDarkMode] = useLocalStorage('darkMode', false);
@@ -55,18 +54,18 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark' : ''}`}>
+    <div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-200">
       <Navigation 
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}
       />
-      
+
       {currentPage === 'home' && (
         <HomePage setCurrentPage={setCurrentPage} />
       )}
-      
+
       {currentPage === 'create' && (
         <TestInputPage 
           onStartTest={handleStartTest}
@@ -74,7 +73,7 @@ const App: React.FC = () => {
           setSavedQuestions={setSavedQuestions}
         />
       )}
-      
+
       {currentPage === 'test' && currentTest && (
         <TestPage 
           questions={currentTest}
@@ -82,7 +81,7 @@ const App: React.FC = () => {
           onExit={handleTestExit}
         />
       )}
-      
+
       {currentPage === 'results' && testResults && (
         <ResultPage 
           results={testResults}
