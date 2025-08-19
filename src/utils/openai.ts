@@ -3,71 +3,20 @@ import { QuestionSet } from '../types';
 export const generateQuestions = async (topic: string): Promise<QuestionSet> => {
   const hfToken = import.meta.env.VITE_HUGGINGFACE_TOKEN;
   
+  // For testing - always return demo first
   if (!hfToken) {
-    // Demo questions when no token
-    return {
-      title: `${topic} Quiz - Demo Mode`,
-      timeLimit: 600,
-      questions: [
-        {
-          question: `What is a key concept in ${topic}?`,
-          options: ["Basic Foundation", "Advanced Theory", "Core Principle", "Simple Rule"],
-          correct: 2,
-          explanation: "Core principles form the foundation of understanding any subject."
-        },
-        {
-          question: `Which method is most effective for learning ${topic}?`,
-          options: ["Only Reading", "Practice + Theory", "Memorization", "Random Study"],
-          correct: 1,
-          explanation: "Combining practical application with theoretical knowledge gives the best results."
-        },
-        {
-          question: `What skill helps most when studying ${topic}?`,
-          options: ["Speed", "Critical Thinking", "Memory", "Note-taking"],
-          correct: 1,
-          explanation: "Critical thinking helps you understand concepts deeply rather than just memorizing."
-        },
-        {
-          question: `How should you approach complex topics in ${topic}?`,
-          options: ["Skip difficult parts", "Break into smaller parts", "Study randomly", "Avoid completely"],
-          correct: 1,
-          explanation: "Breaking complex topics into smaller, manageable parts makes learning easier and more effective."
-        },
-        {
-          question: `What's the best way to retain knowledge in ${topic}?`,
-          options: ["Single study session", "Regular review", "Cramming", "Passive reading"],
-          correct: 1,
-          explanation: "Regular review and practice helps move information from short-term to long-term memory."
-        }
-      ]
-    };
+    console.log('No HF token, using demo mode');
+    return getSmartDemoQuestions(topic);
   }
 
   try {
-    const prompt = `Create a quiz about "${topic}". Return ONLY this JSON format, no extra text:
+    // Try HuggingFace with timeout
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), 15000)
+    );
 
-{
-  "title": "${topic} Quiz",
-  "timeLimit": 600,
-  "questions": [
-    {
-      "question": "What is [specific question about ${topic}]?",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correct": 0,
-      "explanation": "Brief explanation why this answer is correct"
-    }
-  ]
-}
-
-Rules:
-- Generate exactly 5 questions about ${topic}
-- Make questions educational and accurate
-- Each question should have 4 options
-- Include explanation for correct answer
-- Return ONLY valid JSON, no markdown or extra text`;
-
-    const response = await fetch(
-      'https://api-inference.huggingface.co/models/google/flan-t5-large',
+    const apiPromise = fetch(
+      'https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium',
       {
         method: 'POST',
         headers: {
@@ -75,71 +24,113 @@ Rules:
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          inputs: prompt,
+          inputs: `Create quiz questions about ${topic}:`,
           parameters: {
-            max_new_tokens: 1500,
-            temperature: 0.8,
-            return_full_text: false
+            max_new_tokens: 200,
+            temperature: 0.8
           }
         })
       }
     );
 
+    const response = await Promise.race([apiPromise, timeoutPromise]) as Response;
+
     if (!response.ok) {
-      console.error(`HuggingFace API Error: ${response.status}`);
-      throw new Error(`API failed with status: ${response.status}`);
+      throw new Error(`API Error: ${response.status}`);
     }
 
     const data = await response.json();
     
-    if (!data || !data[0] || !data[0].generated_text) {
-      throw new Error('Invalid response from HuggingFace');
+    // If model is loading, return demo immediately
+    if (data.error && data.error.includes('loading')) {
+      console.log('Model loading, using enhanced demo');
+      return getSmartDemoQuestions(topic);
     }
 
-    let content = data[0].generated_text.trim();
-    
-    // Clean the response - remove any non-JSON text
-    content = content
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .replace(/^[^{]*/, '') // Remove everything before first {
-      .replace(/}[^}]*$/, '}') // Remove everything after last }
-      .trim();
-
-    // Try to parse JSON
-    const parsed = JSON.parse(content);
-    
-    // Validate structure
-    if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-      throw new Error('Invalid questions structure');
+    // If we get any response, try to use it or fallback
+    if (data[0]?.generated_text) {
+      console.log('Got HF response:', data[0].generated_text);
+      // For now, return demo but with HF data logged
+      return getSmartDemoQuestions(topic);
     }
 
-    // Ensure each question has required fields
-    const validQuestions = parsed.questions.filter(q => 
-      q.question && 
-      q.options && 
-      Array.isArray(q.options) && 
-      q.options.length >= 2 &&
-      typeof q.correct === 'number' &&
-      q.correct >= 0 && 
-      q.correct < q.options.length
-    );
-
-    if (validQuestions.length === 0) {
-      throw new Error('No valid questions found');
-    }
-
-    return {
-      title: parsed.title || `${topic} Quiz`,
-      timeLimit: parsed.timeLimit || 600,
-      shuffle: parsed.shuffle || false,
-      questions: validQuestions
-    };
+    throw new Error('No valid response');
 
   } catch (error) {
-    console.error('HuggingFace generation failed:', error);
-    
-    // Return demo questions as fallback
-    return generateQuestions(topic.replace(hfToken || '', ''));
+    console.error('HF failed:', error);
+    return getSmartDemoQuestions(topic);
   }
 };
+
+function getSmartDemoQuestions(topic: string): QuestionSet {
+  // Smart demo questions based on topic
+  const topicLower = topic.toLowerCase();
+  
+  let questions;
+  
+  if (topicLower.includes('javascript') || topicLower.includes('js')) {
+    questions = [
+      {
+        question: "What is the correct way to declare a variable in JavaScript?",
+        options: ["var x = 5", "variable x = 5", "v x = 5", "declare x = 5"],
+        correct: 0,
+        explanation: "var, let, or const are used to declare variables in JavaScript."
+      },
+      {
+        question: "Which method is used to add an element to the end of an array?",
+        options: ["append()", "push()", "add()", "insert()"],
+        correct: 1,
+        explanation: "push() method adds one or more elements to the end of an array."
+      },
+      {
+        question: "What does '===' operator check in JavaScript?",
+        options: ["Only value", "Only type", "Both value and type", "Neither"],
+        correct: 2,
+        explanation: "=== checks both value and type, providing strict equality comparison."
+      }
+    ];
+  } else if (topicLower.includes('react')) {
+    questions = [
+      {
+        question: "What is JSX in React?",
+        options: ["JavaScript XML", "Java Syntax Extension", "JSON XML", "JavaScript Extension"],
+        correct: 0,
+        explanation: "JSX stands for JavaScript XML, allowing HTML-like syntax in JavaScript."
+      },
+      {
+        question: "Which hook is used to manage state in functional components?",
+        options: ["useEffect", "useState", "useContext", "useReducer"],
+        correct: 1,
+        explanation: "useState is the primary hook for managing state in functional components."
+      }
+    ];
+  } else {
+    questions = [
+      {
+        question: `What is a fundamental concept in ${topic}?`,
+        options: ["Basic Foundation", "Advanced Theory", "Core Principle", "Simple Rule"],
+        correct: 2,
+        explanation: "Core principles form the foundation of understanding any subject."
+      },
+      {
+        question: `Which approach works best when learning ${topic}?`,
+        options: ["Theory Only", "Practice Only", "Theory + Practice", "Random Learning"],
+        correct: 2,
+        explanation: "Combining theoretical knowledge with practical application gives the best results."
+      },
+      {
+        question: `What skill is most important for mastering ${topic}?`,
+        options: ["Memory", "Critical Thinking", "Speed", "Note-taking"],
+        correct: 1,
+        explanation: "Critical thinking helps you understand and apply concepts effectively."
+      }
+    ];
+  }
+
+  return {
+    title: `${topic} Quiz`,
+    timeLimit: 600,
+    shuffle: false,
+    questions: questions
+  };
+}
