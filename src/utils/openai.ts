@@ -67,7 +67,7 @@ Rules:
 - Return ONLY valid JSON, no markdown or extra text`;
 
     const response = await fetch(
-      'https://api-inference.huggingface.co/models/microsoft/DialoGPT-large',
+      'https://api-inference.huggingface.co/models/google/flan-t5-large',
       {
         method: 'POST',
         headers: {
