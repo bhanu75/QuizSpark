@@ -351,16 +351,7 @@ const TestPage: React.FC<TestPageProps> = ({ questions, onComplete, onExit }) =>
         </div>
       </div>
 
-      {/* Keyboard Shortcuts Help */}
-      <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 text-sm text-gray-600 dark:text-gray-300 max-w-xs">
-        <div className="font-medium mb-2">Keyboard Shortcuts:</div>
-        <div className="space-y-1">
-          <div>1-4: Select option</div>
-          <div>Enter/Space: Next question</div>
-          <div>←/→: Navigate questions</div>
-          <div>F: Flag question</div>
-        </div>
-      </div>
+  
     </div>
   );
 };
